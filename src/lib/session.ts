@@ -35,7 +35,8 @@ export async function verifySession(token: string | undefined): Promise<SessionP
 export const sessionCookieOptions = {
   httpOnly: true,
   sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
+  // Off only when the VPS is reached over plain http (COOKIE_SECURE=0).
+  secure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === '1' : process.env.NODE_ENV === 'production',
   path: '/',
   maxAge: MAX_AGE_SECONDS,
 };

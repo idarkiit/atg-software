@@ -4,7 +4,7 @@ Phần mềm quản lý bán hàng, kho, nhập khẩu, công nợ, thu chi cho 
 
 ## Công nghệ
 - Next.js 16 (App Router, TypeScript), giao diện Astryx (theme neutral, tiếng Việt)
-- PostgreSQL (Neon trên Vercel) qua Drizzle ORM
+- PostgreSQL chuẩn qua Drizzle ORM (tự cài trên VPS; bản xem thử có thể dùng Neon gói Free)
 - Đăng nhập bằng tài khoản/mật khẩu, phân quyền theo nhóm quyền × chức năng × (xem, thêm, sửa, xóa, đề xuất, duyệt)
 
 ## Chạy thử trên máy
@@ -14,7 +14,10 @@ npm run dev          # không có DATABASE_URL: chạy cơ sở dữ liệu tạ
 ```
 Đăng nhập: `admin / admin123`, hoặc `ketoan`, `kho`, `banhang`, `hr` với mật khẩu `123456`.
 
-## Deploy lên Vercel
+## Cài chính thức trên VPS của khách
+Xem [deploy/HUONG-DAN-CAI-DAT.md](deploy/HUONG-DAN-CAI-DAT.md): Docker Compose gồm ứng dụng, PostgreSQL và sao lưu hằng ngày, không tốn phí dịch vụ ngoài.
+
+## Bản xem thử trên Vercel (miễn phí, chỉ để khách duyệt)
 1. Import repo này vào Vercel (Add New → Project → Deploy).
 2. Storage → Create Database → Neon (Free, Singapore). Vercel tự thêm `DATABASE_URL`.
 3. (Nên có) Settings → Environment Variables: thêm `AUTH_SECRET` là một chuỗi ngẫu nhiên dài.

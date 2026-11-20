@@ -1,0 +1,65 @@
+# One-command install on the customer's VPS:  docker compose up -d --build
+# Needs a .env file next to this one (copy .env.example and change the values).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: atg
+      POSTGRES_USER: atg
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atg -d atg"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://atg:${DB_PASSWORD}@db:5432/atg
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      TAX_MODE: "0"
+      COOKIE_SECURE: ${COOKIE_SECURE:-1}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+
+  # Tax copy of the software on its own port/domain. Start with:
+  #   docker compose --profile thue up -d
+  app-thue:
+    build: .
+    profiles: ["thue"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://atg:${DB_PASSWORD}@db:5432/atg
+      AUTH_SECRET: ${AUTH_SECRET}
+      TAX_MODE: "1"
+      COOKIE_SECURE: ${COOKIE_SECURE:-1}
+    ports:
+      - "${TAX_APP_PORT:-3001}:3000"
+
+  # Daily database backup at 02:00, keeps 30 days in ./deploy/backups
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./deploy/backups:/backups
+      - ./deploy/backup.sh:/backup.sh:ro
+    entrypoint: ["sh", "/backup.sh"]
+
+volumes:
+  pgdata:
