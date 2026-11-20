@@ -97,6 +97,8 @@ export type DocListRow = {
   total: number;
   costTotal: number;
   paidAmount: number;
+  /** Paid later through debt payments linked to this voucher. */
+  paidLater: number;
   lineCount: number;
   totalQty: number;
   status: 'posted' | 'cancelled';
@@ -136,6 +138,7 @@ export async function listDocs(user: CurrentUser, filters: DocFilters): Promise<
       employeeCode: schema.employees.code,
       typeName: schema.stockDocTypes.name,
       createdByName: schema.users.fullName,
+      paidLater: sql<string>`(select coalesce(sum(p.amount),0) from debt_payments p where p.doc_id = ${d.id})`,
       lineCount: sql<number>`(select count(*)::int from stock_doc_lines l where l.doc_id = ${d.id})`,
       totalQty: sql<string>`(select coalesce(sum(l.qty),0) from stock_doc_lines l where l.doc_id = ${d.id})`,
     })
@@ -164,6 +167,7 @@ export async function listDocs(user: CurrentUser, filters: DocFilters): Promise<
     total: Number(r.doc.total),
     costTotal: Number(r.doc.costTotal),
     paidAmount: Number(r.doc.paidAmount),
+    paidLater: Number(r.paidLater),
     lineCount: Number(r.lineCount),
     totalQty: Number(r.totalQty),
     status: r.doc.status as 'posted' | 'cancelled',
@@ -636,7 +640,9 @@ async function validate(db: DB, user: CurrentUser, def: DocKindDef, input: DocIn
 }
 
 async function postDoc(db: DB, user: CurrentUser, def: DocKindDef, input: DocInput) {
-  const settings = await getSettings();
+  // Read through the transaction handle: getSettings() would use another connection and
+  // deadlock on the single-connection demo database (PGlite).
+  const settings = Object.fromEntries((await db.select().from(schema.settings)).map(r => [r.key, r.value]));
   const allowNegative = settings.allowNegativeStock === true;
   const lines = input.lines.filter(l => l.productId).map((l, i) => ({
     ...l,
@@ -811,6 +817,7 @@ async function postDoc(db: DB, user: CurrentUser, def: DocKindDef, input: DocInp
     };
     if (def.direction === 'in') {
       moves.push({...base, warehouseId: input.warehouseId, qty: l.qty});
+      if (def.kind === 'sale_return') costTotal += l.qty * unitCost;
     } else if (def.direction === 'out') {
       moves.push({...base, warehouseId: input.warehouseId, qty: -l.qty});
       costTotal += l.qty * unitCost;

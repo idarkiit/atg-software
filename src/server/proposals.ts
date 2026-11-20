@@ -3,6 +3,7 @@ import {and, desc, eq, inArray} from 'drizzle-orm';
 import {getDb, schema} from '@/db';
 import {can, type CurrentUser} from '@/lib/auth';
 import {RESOURCE_DEFS} from '@/lib/resources/definitions';
+import {countPendingPriceProposals} from './pricing';
 import {col, nextCode, notifyApprovers, resolveResource, writeAudit} from './resources';
 
 export type ProposalView = {
@@ -126,7 +127,8 @@ export async function listPending(user: CurrentUser): Promise<ProposalView[]> {
 
 export async function countPendingForUser(user: CurrentUser) {
   const items = await listPending(user);
-  return items.filter(i => i.status === 'pending' && i.canApprove).length;
+  const generic = items.filter(i => i.status === 'pending' && i.canApprove).length;
+  return generic + (await countPendingPriceProposals(user));
 }
 
 export async function reviewProposal(
