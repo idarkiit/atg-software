@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ATG – Phần mềm quản lý
 
-## Getting Started
+Phần mềm quản lý bán hàng, kho, nhập khẩu, công nợ, thu chi cho ATG (18 phân hệ theo cây chức năng chốt 13/11/2026).
 
-First, run the development server:
+## Công nghệ
+- Next.js 16 (App Router, TypeScript), giao diện Astryx (theme neutral, tiếng Việt)
+- PostgreSQL (Neon trên Vercel) qua Drizzle ORM
+- Đăng nhập bằng tài khoản/mật khẩu, phân quyền theo nhóm quyền × chức năng × (xem, thêm, sửa, xóa, đề xuất, duyệt)
 
+## Chạy thử trên máy
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # không có DATABASE_URL: chạy cơ sở dữ liệu tạm trong bộ nhớ, có sẵn dữ liệu mẫu
 ```
+Đăng nhập: `admin / admin123`, hoặc `ketoan`, `kho`, `banhang`, `hr` với mật khẩu `123456`.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy lên Vercel
+1. Import repo này vào Vercel (Add New → Project → Deploy).
+2. Storage → Create Database → Neon (Free, Singapore). Vercel tự thêm `DATABASE_URL`.
+3. (Nên có) Settings → Environment Variables: thêm `AUTH_SECRET` là một chuỗi ngẫu nhiên dài.
+4. Redeploy. Lần chạy đầu phần mềm tự tạo bảng và nạp dữ liệu mẫu.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Bản sao phần mềm quản lý thuế: tạo thêm một project Vercel từ cùng repo, đặt `TAX_MODE=1` và tên miền riêng.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Cấu trúc
+- `src/lib/features.ts` – cây 18 phân hệ, mã chức năng, đợt triển khai
+- `src/lib/resources/definitions.ts` – khai báo các màn danh mục (trường, bắt buộc, lọc, chế độ đề xuất/nháp)
+- `src/db/schema.ts` – bảng dữ liệu; `drizzle/` – migration (tự chạy khi khởi động)
+- `src/server/` – nghiệp vụ phía máy chủ (danh mục, đề xuất – duyệt, thông báo)
+- `docs/AGENT_BRIEF.md` – quy ước cho các trợ lý AI cùng phát triển

@@ -19,6 +19,7 @@ export type ProposalView = {
   reason: string | null;
   status: string;
   requestedByName: string | null;
+  requestedById: number | null;
   createdAt: string;
   canApprove: boolean;
 };
@@ -80,6 +81,7 @@ export async function listPending(user: CurrentUser): Promise<ProposalView[]> {
       reason: p.reason,
       status: p.status,
       requestedByName: p.requestedBy ? (userName.get(p.requestedBy) ?? null) : null,
+      requestedById: p.requestedBy ?? null,
       createdAt: p.createdAt.toISOString(),
       canApprove: approver && p.status === 'pending',
     });
@@ -113,6 +115,7 @@ export async function listPending(user: CurrentUser): Promise<ProposalView[]> {
         reason: null,
         status: 'pending',
         requestedByName: raw.createdBy ? (userName.get(raw.createdBy as number) ?? null) : null,
+        requestedById: (raw.createdBy as number) ?? null,
         createdAt: (raw.createdAt as Date).toISOString(),
         canApprove: approver,
       });
