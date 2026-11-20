@@ -41,7 +41,7 @@ export type ModuleIcon =
   | 'asset';
 
 /** Phase currently delivered. Functions with phase <= this are live. */
-export const CURRENT_PHASE = 1;
+export const CURRENT_PHASE = 2;
 
 export const MODULES: FeatureModule[] = [
   {

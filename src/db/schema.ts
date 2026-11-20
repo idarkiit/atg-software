@@ -18,7 +18,12 @@ import {
   numeric,
   date,
   primaryKey,
+  unique,
+  index,
 } from 'drizzle-orm/pg-core';
+
+/** Money in VND (no rounding issues up to 18 digits). */
+const money = (name: string) => numeric(name, {precision: 18, scale: 2, mode: 'number'});
 
 const audit = {
   isActive: boolean('is_active').notNull().default(true),
@@ -382,3 +387,214 @@ export const defectiveProducts = pgTable('defective_products', {
   ...audit,
 });
 
+
+// ---------------------------------------------------------------- 6. Bảng giá
+
+/** One row per product, created on demand. Changed only by approving a price proposal. */
+export const salePrices = pgTable('sale_prices', {
+  productId: integer('product_id')
+    .primaryKey()
+    .references(() => products.id, {onDelete: 'cascade'}),
+  price1: money('price_1').notNull().default(0),
+  price2: money('price_2').notNull().default(0),
+  price3: money('price_3').notNull().default(0),
+  updatedAt: timestamp('updated_at', {withTimezone: true}).notNull().defaultNow(),
+  updatedBy: integer('updated_by'),
+});
+
+/** Every change of the sale price table, for audit and "lịch sử thay đổi giá". */
+export const salePriceHistory = pgTable('sale_price_history', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').notNull(),
+  price1: money('price_1').notNull(),
+  price2: money('price_2').notNull(),
+  price3: money('price_3').notNull(),
+  proposalId: integer('proposal_id'),
+  changedBy: integer('changed_by'),
+  changedAt: timestamp('changed_at', {withTimezone: true}).notNull().defaultNow(),
+});
+
+export const supplierPrices = pgTable(
+  'supplier_prices',
+  {
+    id: serial('id').primaryKey(),
+    code: text('code').notNull().unique(),
+    supplierId: integer('supplier_id')
+      .notNull()
+      .references(() => suppliers.id),
+    productId: integer('product_id')
+      .notNull()
+      .references(() => products.id),
+    price: money('price').notNull(),
+    currency: text('currency').notNull().default('VND'),
+    note: text('note'),
+    ...audit,
+  },
+  t => [unique('supplier_prices_supplier_product').on(t.supplierId, t.productId)],
+);
+
+/** Average purchase price typed in by ATG (not computed), used to estimate margin. */
+export const avgCosts = pgTable('avg_costs', {
+  productId: integer('product_id')
+    .primaryKey()
+    .references(() => products.id, {onDelete: 'cascade'}),
+  avgCost: money('avg_cost').notNull().default(0),
+  extraCost: money('extra_cost').notNull().default(0), // chi phí (vận chuyển, thuế…) per unit
+  note: text('note'),
+  updatedAt: timestamp('updated_at', {withTimezone: true}).notNull().defaultNow(),
+  updatedBy: integer('updated_by'),
+});
+
+/** Staff propose new sale prices; a manager reviews them on "Tính lãi giá bán". */
+export const priceProposals = pgTable('price_proposals', {
+  id: serial('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  productId: integer('product_id')
+    .notNull()
+    .references(() => products.id),
+  currentPrice1: money('current_price_1').notNull().default(0),
+  currentPrice2: money('current_price_2').notNull().default(0),
+  currentPrice3: money('current_price_3').notNull().default(0),
+  proposedPrice1: money('proposed_price_1').notNull(),
+  proposedPrice2: money('proposed_price_2'),
+  proposedPrice3: money('proposed_price_3'),
+  reason: text('reason'),
+  status: text('status').notNull().default('pending'), // pending | approved | rejected
+  // filled by the reviewer on "Tính lãi giá bán"
+  approvedPrice1: money('approved_price_1'),
+  approvedPrice2: money('approved_price_2'),
+  approvedPrice3: money('approved_price_3'),
+  costBasis: money('cost_basis'),
+  otherCost: money('other_cost'),
+  requestedBy: integer('requested_by'),
+  reviewedBy: integer('reviewed_by'),
+  reviewedAt: timestamp('reviewed_at', {withTimezone: true}),
+  reviewNote: text('review_note'),
+  createdAt: timestamp('created_at', {withTimezone: true}).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------- 9. Xuất nhập
+
+/**
+ * Loại xuất nhập. `kind` decides the business rules (see lib/stock/kinds.ts);
+ * ATG can add several named types per kind (e.g. "Xuất bán lẻ", "Xuất bán sỉ").
+ */
+export const stockDocTypes = pgTable('stock_doc_types', {
+  id: serial('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  name: text('name').notNull(),
+  kind: text('kind').notNull(),
+  description: text('description'),
+  ...audit,
+});
+
+/**
+ * Every warehouse voucher (phiếu). Posting a voucher writes stock_moves;
+ * cancelling it removes them. Vouchers are never edited after posting.
+ */
+export const stockDocs = pgTable(
+  'stock_docs',
+  {
+    id: serial('id').primaryKey(),
+    code: text('code').notNull().unique(),
+    kind: text('kind').notNull(),
+    typeId: integer('type_id').references(() => stockDocTypes.id),
+    branchId: integer('branch_id')
+      .notNull()
+      .references(() => branches.id),
+    warehouseId: integer('warehouse_id')
+      .notNull()
+      .references(() => warehouses.id),
+    toWarehouseId: integer('to_warehouse_id').references(() => warehouses.id),
+    customerId: integer('customer_id').references(() => customers.id),
+    supplierId: integer('supplier_id').references(() => suppliers.id),
+    employeeId: integer('employee_id').references(() => employees.id),
+    refDocId: integer('ref_doc_id'),
+    docDate: date('doc_date').notNull(),
+    dueDate: date('due_date'),
+    priceLevel: integer('price_level').notNull().default(1),
+    isVat: boolean('is_vat').notNull().default(false),
+    isTax: boolean('is_tax').notNull().default(false),
+    invoiceNo: text('invoice_no'),
+    vatRate: numeric('vat_rate', {precision: 5, scale: 2, mode: 'number'}).notNull().default(0),
+    subtotal: money('subtotal').notNull().default(0),
+    discountAmount: money('discount_amount').notNull().default(0),
+    vatAmount: money('vat_amount').notNull().default(0),
+    otherCost: money('other_cost').notNull().default(0),
+    total: money('total').notNull().default(0),
+    paidAmount: money('paid_amount').notNull().default(0),
+    paymentMethod: text('payment_method'), // cash | bank
+    costTotal: money('cost_total').notNull().default(0),
+    status: text('status').notNull().default('posted'), // posted | cancelled
+    reason: text('reason'),
+    note: text('note'),
+    cancelledAt: timestamp('cancelled_at', {withTimezone: true}),
+    cancelledBy: integer('cancelled_by'),
+    cancelReason: text('cancel_reason'),
+    ...audit,
+  },
+  t => [index('stock_docs_kind_date').on(t.kind, t.docDate)],
+);
+
+export const stockDocLines = pgTable('stock_doc_lines', {
+  id: serial('id').primaryKey(),
+  docId: integer('doc_id')
+    .notNull()
+    .references(() => stockDocs.id, {onDelete: 'cascade'}),
+  lineNo: integer('line_no').notNull().default(0),
+  productId: integer('product_id')
+    .notNull()
+    .references(() => products.id),
+  /** Chuyển đổi tồn only: out = mã bị trừ, in = mã được cộng. */
+  lineDir: text('line_dir'),
+  qty: numeric('qty', {precision: 14, scale: 3, mode: 'number'}).notNull(),
+  unitPrice: money('unit_price').notNull().default(0),
+  discount: money('discount').notNull().default(0), // tiền giảm trên cả dòng
+  amount: money('amount').notNull().default(0),
+  unitCost: money('unit_cost').notNull().default(0), // giá vốn tại thời điểm ghi sổ
+  note: text('note'),
+});
+
+/** Stock ledger. On-hand = sum(qty) per product & warehouse. Value uses moving average cost. */
+export const stockMoves = pgTable(
+  'stock_moves',
+  {
+    id: serial('id').primaryKey(),
+    docId: integer('doc_id')
+      .notNull()
+      .references(() => stockDocs.id, {onDelete: 'cascade'}),
+    lineId: integer('line_id'),
+    productId: integer('product_id')
+      .notNull()
+      .references(() => products.id),
+    warehouseId: integer('warehouse_id')
+      .notNull()
+      .references(() => warehouses.id),
+    branchId: integer('branch_id').notNull(),
+    qty: numeric('qty', {precision: 14, scale: 3, mode: 'number'}).notNull(), // + nhập, - xuất
+    unitCost: money('unit_cost').notNull().default(0),
+    moveDate: date('move_date').notNull(),
+    isTax: boolean('is_tax').notNull().default(false),
+    createdAt: timestamp('created_at', {withTimezone: true}).notNull().defaultNow(),
+  },
+  t => [index('stock_moves_product_wh').on(t.productId, t.warehouseId)],
+);
+
+/**
+ * Money received from customers / paid to suppliers against debt.
+ * Phase 5 (Thu chi) creates these from receipts; phase 2 records them on the debt screens.
+ */
+export const debtPayments = pgTable('debt_payments', {
+  id: serial('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  partyType: text('party_type').notNull(), // customer | supplier
+  customerId: integer('customer_id').references(() => customers.id),
+  supplierId: integer('supplier_id').references(() => suppliers.id),
+  docId: integer('doc_id').references(() => stockDocs.id),
+  branchId: integer('branch_id'),
+  amount: money('amount').notNull(),
+  payDate: date('pay_date').notNull(),
+  method: text('method').notNull().default('cash'), // cash | bank
+  note: text('note'),
+  ...audit,
+});

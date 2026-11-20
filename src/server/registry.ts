@@ -22,4 +22,7 @@ export const RESOURCE_TABLES: Record<string, PgTable> = {
   'san-pham/san-pham': schema.products,
   'san-pham/anh-san-pham': schema.productImages,
   'san-pham/anh-nha-cung-cap': schema.supplierImages,
+  'canh-bao/ghi-chu': schema.notes,
+  'canh-bao/san-pham-loi': schema.defectiveProducts,
+  'van-chuyen/loai-xuat-nhap': schema.stockDocTypes,
 };

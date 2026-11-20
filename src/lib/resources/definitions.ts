@@ -1,7 +1,8 @@
 import type {ResourceDef} from './types';
+import {DOC_KIND_OPTIONS} from '@/lib/stock/kinds';
 
 /**
- * Catalog screens of phase 1. Keys match feature keys in lib/features.ts.
+ * Catalog screens. Keys match feature keys in lib/features.ts.
  * Server-side table bindings live in server/registry.ts.
  */
 export const RESOURCE_DEFS: ResourceDef[] = [
@@ -371,6 +372,56 @@ export const RESOURCE_DEFS: ResourceDef[] = [
       },
       {name: 'url', label: 'Ảnh', type: 'image', required: true, inTable: true},
       {name: 'caption', label: 'Mô tả ảnh', type: 'text', inTable: true, wide: true},
+    ],
+  },
+  // ------------------------------------------------------------ Cảnh báo
+  {
+    key: 'canh-bao/ghi-chu',
+    title: 'Tạo ghi chú',
+    noun: 'ghi chú',
+    description: 'Ghi chú nhắc việc gắn với sản phẩm, khách hàng hoặc nhà cung cấp. Lọc theo đối tượng để thống kê.',
+    codePrefix: 'GC',
+    labelField: 'title',
+    editMode: 'direct',
+    fields: [
+      {name: 'title', label: 'Tiêu đề', type: 'text', required: true, inTable: true, wide: true},
+      {name: 'productId', label: 'Sản phẩm', type: 'ref', ref: 'san-pham/san-pham', inTable: true, filterable: true},
+      {name: 'customerId', label: 'Khách hàng', type: 'ref', ref: 'doi-tuong/khach-hang', inTable: true, filterable: true},
+      {name: 'supplierId', label: 'Nhà cung cấp', type: 'ref', ref: 'doi-tuong/nha-cung-cap', inTable: true, filterable: true},
+      {name: 'remindAt', label: 'Ngày nhắc', type: 'date', inTable: true},
+      {name: 'content', label: 'Nội dung', type: 'textarea', wide: true},
+    ],
+  },
+  {
+    key: 'canh-bao/san-pham-loi',
+    title: 'Cảnh báo sản phẩm',
+    noun: 'sản phẩm lỗi',
+    description:
+      'Danh mục sản phẩm lỗi do nhân viên phát hiện. Khi lập phiếu nhập/xuất, bấm "Check lỗi" để được cảnh báo các mã nằm trong danh mục này.',
+    codePrefix: 'SPL',
+    labelField: 'defectType',
+    editMode: 'direct',
+    fields: [
+      {name: 'productId', label: 'Sản phẩm', type: 'ref', ref: 'san-pham/san-pham', required: true, inTable: true, filterable: true, wide: true},
+      {name: 'supplierId', label: 'Nhà cung cấp', type: 'ref', ref: 'doi-tuong/nha-cung-cap', inTable: true, filterable: true, description: 'Để trống nếu lỗi với mọi NCC'},
+      {name: 'defectType', label: 'Loại lỗi', type: 'text', required: true, inTable: true},
+      {name: 'isWarning', label: 'Đang cảnh báo', type: 'bool', inTable: true, filterable: true, defaultValue: true, description: 'Tắt khi đã xử lý xong với NCC'},
+      {name: 'detail', label: 'Mô tả lỗi', type: 'textarea', wide: true},
+    ],
+  },
+  // ------------------------------------------------------------ Vận chuyển
+  {
+    key: 'van-chuyen/loai-xuat-nhap',
+    title: 'Loại xuất nhập',
+    noun: 'loại xuất nhập',
+    description: 'Phân loại chứng từ kho. Mỗi loại thuộc một nghiệp vụ (xuất bán, nhập mua, xuất hủy…) và được chọn khi lập phiếu.',
+    codePrefix: 'LXN',
+    labelField: 'name',
+    editMode: 'direct',
+    fields: [
+      {name: 'name', label: 'Tên loại', type: 'text', required: true, inTable: true, wide: true},
+      {name: 'kind', label: 'Nghiệp vụ', type: 'select', required: true, inTable: true, filterable: true, options: DOC_KIND_OPTIONS},
+      {name: 'description', label: 'Mô tả', type: 'textarea', wide: true},
     ],
   },
 ];

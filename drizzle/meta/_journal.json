@@ -8,6 +8,13 @@
       "when": 1795176868322,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795181054189,
+      "tag": "0001_phase2_pricing_stock",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@ import path from 'node:path';
 import type {PgDatabase, PgQueryResultHKT} from 'drizzle-orm/pg-core';
 import * as schema from './schema';
 import {seedIfEmpty} from './seed';
+import {seedPhase2IfEmpty} from './seed-phase2';
 
 export type DB = PgDatabase<PgQueryResultHKT, typeof schema>;
 
@@ -64,6 +65,7 @@ async function init(): Promise<DB> {
     db = liteDb as unknown as DB;
   }
   await seedIfEmpty(db);
+  await seedPhase2IfEmpty(db);
   return db;
 }
 
