@@ -1,38 +1,44 @@
-'use client';
+"use client";
 
 // Scaffolded from the Astryx "login" template; content replaced for ATG.
-import {useState, useTransition, type CSSProperties} from 'react';
-import {VStack} from '@astryxdesign/core/Layout';
-import {Center} from '@astryxdesign/core/Center';
-import {Text, Heading} from '@astryxdesign/core/Text';
-import {TextInput} from '@astryxdesign/core/TextInput';
-import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {Icon} from '@astryxdesign/core/Icon';
-import {Banner} from '@astryxdesign/core/Banner';
-import {CubeIcon} from '@heroicons/react/24/outline';
-import {loginAction} from '@/server/actions';
+import { useState, useTransition, type CSSProperties } from "react";
+import { VStack } from "@astryxdesign/core/Layout";
+import { Center } from "@astryxdesign/core/Center";
+import { Text, Heading } from "@astryxdesign/core/Text";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Icon } from "@astryxdesign/core/Icon";
+import { Banner } from "@astryxdesign/core/Banner";
+import { CubeIcon } from "@heroicons/react/24/outline";
+import { loginAction } from "@/server/actions";
 
 // Standalone auth page paints its own body background (no host shell).
 const pageStyle: CSSProperties = {
-  minHeight: '100dvh',
-  backgroundColor: 'var(--color-background-body)',
+  minHeight: "100dvh",
+  backgroundColor: "var(--color-background-body)",
 };
 const contentStyle: CSSProperties = {
-  width: '100%',
+  width: "100%",
   maxWidth: 400,
 };
 
-export function LoginForm({isDemo}: {isDemo: boolean}) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+export function LoginForm({
+  isDemo,
+  showAccounts,
+}: {
+  isDemo: boolean;
+  showAccounts: boolean;
+}) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const handleSignIn = () => {
-    setError('');
+    setError("");
     if (!username || !password) {
-      setError('Vui lòng nhập tên đăng nhập và mật khẩu.');
+      setError("Vui lòng nhập tên đăng nhập và mật khẩu.");
       return;
     }
     startTransition(async () => {
@@ -91,15 +97,19 @@ export function LoginForm({isDemo}: {isDemo: boolean}) {
           </VStack>
         </Card>
 
-        <Banner
-          status="info"
-          title="Tài khoản dùng thử"
-          description={
-            'admin / admin123 (toàn quyền) · ketoan, kho, banhang, hr / 123456' +
-            (isDemo ? ' · Bản demo: dữ liệu sẽ tự làm mới khi máy chủ khởi động lại.' : '')
-          }
-          collapsible={false}
-        />
+        {showAccounts && (
+          <Banner
+            status="info"
+            title="Tài khoản dùng thử"
+            description={
+              "admin / admin123 (toàn quyền) · ketoan, kho, banhang, hr / 123456" +
+              (isDemo
+                ? " · Bản demo: dữ liệu sẽ tự làm mới khi máy chủ khởi động lại."
+                : "")
+            }
+            collapsible={false}
+          />
+        )}
       </VStack>
     </Center>
   );
